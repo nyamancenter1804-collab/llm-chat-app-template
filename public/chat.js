@@ -1,6 +1,5 @@
 /**
- * LLM Chat App Frontend - Nyaman Center Team
- * Optimized version to prevent hallucination and improve accuracy
+ * LLM Chat App Frontend - Algarion (Gemini Edition)
  */
 
 const chatMessages = document.getElementById("chat-messages");
@@ -8,97 +7,78 @@ const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
 
+// GANTI DENGAN API KEY GEMINI KAMU
+const GEMINI_API_KEY = "AIzaSyDzU2irYfJ3A3RcLW7OPp4vYhHEOvplt2A";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key=${GEMINI_API_KEY}`;
+
 let chatHistory = [];
-let isProcessing = false;
+let brainReference = ""; // Untuk menyimpan data profile.txt
 let isBrainLoaded = false;
 
-/**
- * Memuat profil dari profile.txt dan menyetel instruksi sistem agar AI 
- * tidak memalsukan informasi (Anti-Hallucination).
- */
+// 1. Load data profile.txt sebagai referensi fakta
 async function loadBrain() {
     try {
         const response = await fetch("/profile.txt");
-        if (!response.ok) throw new Error("Gagal memuat profile.txt");
-        
-        const brainData = await response.text();
-        
-        // System Prompt diperketat agar AI jujur dan objektif
-        chatHistory = [{ 
-            role: "system", 
-            content: `Anda adalah Algarion, asisten virtual dari Nyaman Center Team (https://nyamancenter.my.id/).
-            
-            ATURAN UTAMA:
-            1. Gunakan data berikut sebagai referensi utama: [${brainData}].
-            2. JANGAN PERNAH memalsukan informasi atau melebih-lebihkan fakta tentang Nyaman Center.
-            3. Jika informasi tidak tersedia di referensi, gunakan pengetahuan umum yang akurat (seperti data dari Google).
-            4. Jika benar-benar tidak tahu, katakan tidak tahu secara sopan.
-            5. Jawablah secara jujur, objektif, dan informatif.` 
-        }];
-        
+        brainReference = await response.text();
         isBrainLoaded = true;
-        addMessageToChat("assistant", "Halo! Saya Algarion dari Nyaman Center Team. Ada yang bisa saya bantu?");
+        addMessageToChat("assistant", "Halo brot! Saya Algarion dari Nyaman Center Team. Ada yang bisa saya bantu??");
     } catch (e) {
-        console.error("Error loading brain:", e);
-        chatHistory = [{ 
-            role: "system", 
-            content: "Kamu Algarion dari Nyaman Center Team. Berikan jawaban yang jujur dan akurat berdasarkan fakta." 
-        }];
-        addMessageToChat("assistant", "Halo! Saya Algarion. Sistem referensi sedang terbatas, tapi saya siap membantu.");
+        brainReference = "Algarion dari Nyaman Center Team.";
+        addMessageToChat("assistant", "Halo brot! Saya Algarion. Ada yang bisa saya bantu??");
         isBrainLoaded = true;
     }
 }
 
-// Inisialisasi saat script dimuat
 loadBrain();
 
-/**
- * Fungsi utama untuk mengirim pesan dan menangani streaming response
- */
 async function sendMessage() {
     const message = userInput.value.trim();
-    if (!message || isProcessing || !isBrainLoaded) return;
+    if (!message || !isBrainLoaded) return;
 
-    // Kunci UI agar tidak terjadi double-send
-    isProcessing = true;
     userInput.disabled = true;
     sendButton.disabled = true;
 
-    // Tampilkan pesan user di UI
     addMessageToChat("user", message);
-    chatHistory.push({ role: "user", content: message });
     userInput.value = "";
     typingIndicator.classList.add("visible");
 
+    // Persiapkan format pesan untuk Gemini
+    // Kita sisipkan instruksi ketat agar dia tidak ngaco
+    const systemInstruction = `Nama kamu adalah Algarion dari Nyaman Center Team. 
+    Gunakan referensi ini: [${brainReference}]. 
+    ATURAN: 
+    1. JANGAN memalsukan info atau membawa-bawa nama anggota jika tidak ditanya. 
+    2. Panggil pengguna dengan 'brot' atau 'teman'. 
+    3. Gunakan tanda baca titik dan koma yang benar. 
+    4. Jika pertanyaan di luar profil, jawab secara normal menggunakan data Google.`;
+
+    const contents = [
+        { role: "user", parts: [{ text: systemInstruction }] },
+        ...chatHistory.map(msg => ({
+            role: msg.role === "assistant" ? "model" : "user",
+            parts: [{ text: msg.content }]
+        })),
+        { role: "user", parts: [{ text: message }] }
+    ];
+
     try {
-        const res = await fetch("/api/chat", {
+        const res = await fetch(GEMINI_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: chatHistory }),
+            body: JSON.stringify({ contents })
         });
-
-        if (!res.ok) throw new Error("API Error");
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let responseText = "";
 
-        // Buat elemen balon chat asisten (Algarion)
         const msgDiv = document.createElement("div");
         msgDiv.className = "message assistant-message";
-        
-        const label = document.createElement("a");
-        label.className = "sender-link";
-        label.innerText = "ALGARION";
-        label.href = "https://nyamancenter.my.id/";
-        label.target = "_blank";
-        
+        const label = createSenderLabel("ALGARION");
         const p = document.createElement("p");
-        msgDiv.appendChild(label);
-        msgDiv.appendChild(p);
+        msgDiv.append(label, p);
         chatMessages.appendChild(msgDiv);
 
-        // Streaming logic
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -107,44 +87,25 @@ async function sendMessage() {
             const lines = chunk.split("\n");
             
             for (const line of lines) {
-                if (line.trim().startsWith("data: ")) {
-                    const dataStr = line.replace("data: ", "").trim();
-                    if (dataStr === "[DONE]") break;
-                    
-                    try {
-                        const json = JSON.parse(dataStr);
-                        // Ambil konten dari response streaming (menangani berbagai format API)
-                        const content = json.response || json.choices?.[0]?.delta?.content || "";
-                        responseText += content;
+                if (line.includes('"text":')) {
+                    const match = line.match(/"text":\s*"(.*)"/);
+                    if (match) {
+                        // Unescape string (menangani \n, \", dll)
+                        const cleanText = JSON.parse(`"${match[1]}"`);
+                        responseText += cleanText;
                         p.textContent = responseText;
                         chatMessages.scrollTop = chatMessages.scrollHeight;
-                    } catch (err) {
-                        // Skip jika json tidak valid
                     }
                 }
             }
         }
 
-        // Simpan jawaban lengkap ke riwayat
+        chatHistory.push({ role: "user", content: message });
         chatHistory.push({ role: "assistant", content: responseText });
 
-        // Tambahkan tombol salin setelah jawaban selesai
-        const copyBtn = document.createElement("button");
-        copyBtn.className = "copy-btn";
-        copyBtn.innerText = "Salin Jawaban";
-        copyBtn.style.marginTop = "10px";
-        copyBtn.onclick = () => {
-            navigator.clipboard.writeText(responseText);
-            copyBtn.innerText = "Tersalin!";
-            setTimeout(() => copyBtn.innerText = "Salin Jawaban", 2000);
-        };
-        msgDiv.appendChild(copyBtn);
-
     } catch (err) {
-        console.error("Chat Error:", err);
-        addMessageToChat("assistant", "Maaf bro, koneksi ke otak saya terputus sebentar. Coba lagi ya.");
+        addMessageToChat("assistant", "Maaf brot, koneksi ke Google Gemini terganggu.");
     } finally {
-        isProcessing = false;
         userInput.disabled = false;
         sendButton.disabled = false;
         typingIndicator.classList.remove("visible");
@@ -152,39 +113,25 @@ async function sendMessage() {
     }
 }
 
-/**
- * Fungsi helper untuk menampilkan pesan di UI
- */
+function createSenderLabel(name) {
+    const label = document.createElement("a");
+    label.className = "sender-link";
+    label.innerText = name;
+    label.href = "https://nyamancenter.my.id/";
+    label.target = "_blank";
+    return label;
+}
+
 function addMessageToChat(role, content) {
     const div = document.createElement("div");
     div.className = `message ${role}-message`;
-    
-    const label = document.createElement("a");
-    label.className = "sender-link";
-    if (role === "assistant") {
-        label.innerText = "ALGARION";
-        label.href = "https://nyamancenter.my.id/";
-        label.target = "_blank";
-    } else {
-        label.innerText = "KAMU";
-        label.style.cursor = "default";
-        label.style.textDecoration = "none";
-    }
-    
+    const label = (role === "assistant") ? createSenderLabel("ALGARION") : Object.assign(document.createElement("span"), {innerText: "KAMU", className: "sender-link"});
     const p = document.createElement("p");
     p.textContent = content;
-    
-    div.appendChild(label);
-    div.appendChild(p);
+    div.append(label, p);
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Event Listeners
 sendButton.onclick = sendMessage;
-userInput.onkeydown = (e) => { 
-    if(e.key === "Enter" && !e.shiftKey) { 
-        e.preventDefault(); 
-        sendMessage(); 
-    } 
-};
+userInput.onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
