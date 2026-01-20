@@ -6,8 +6,7 @@
     <title>Nyaman Center Team - Algarion AI</title>
     <style>
         :root {
-            /* Warna dengan kontras tinggi sesuai standar 4.5:1 */
-            --primary-color: #d35400; /* Orange lebih gelap untuk kontras */
+            --primary-color: #d35400; 
             --primary-hover: #ba4a00;
             --light-bg: #f4f7f6;
             --border-color: #bfc9ca;
@@ -26,7 +25,6 @@
             color: var(--text-color);
         }
 
-        /* Navigasi Keyboard: Fokus Visual */
         *:focus {
             outline: 3px solid var(--focus-outline);
             outline-offset: 2px;
@@ -62,15 +60,20 @@
             line-height: 1.5;
         }
 
-        /* Aksesibilitas: Label Pengirim */
-        .message::before { 
-            content: attr(data-sender); 
-            display: block; 
-            font-size: 0.75rem; 
-            font-weight: bold; 
-            margin-bottom: 0.4rem; 
-            color: var(--text-light); 
+        /* Style Link Nama Pengirim */
+        .sender-link {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-bottom: 0.4rem;
             text-transform: uppercase;
+            text-decoration: none;
+            color: var(--text-light);
+        }
+
+        .sender-link:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
         }
 
         .user-message { 
@@ -94,10 +97,7 @@
             border: 1px solid var(--border-color); 
             border-radius: 6px; 
             font-weight: 600;
-            transition: background 0.2s;
         }
-
-        .copy-btn:hover { background: #d5dbdb; }
 
         .message-input { 
             display: flex; 
@@ -113,7 +113,6 @@
             border-radius: 8px; 
             resize: none; 
             font-size: 1rem;
-            color: var(--text-color);
         }
 
         #send-button { 
@@ -125,10 +124,7 @@
             border-radius: 8px; 
             cursor: pointer; 
             font-weight: bold;
-            font-size: 1rem;
         }
-
-        #send-button:hover { background: var(--primary-hover); }
 
         .typing-indicator { 
             display: none; 
@@ -143,25 +139,14 @@
     </style>
 </head>
 <body>
-
     <main class="chat-container">
-        <section id="chat-messages" class="chat-messages" role="log" aria-live="polite">
-            </section>
-
-        <div id="typing-indicator" class="typing-indicator">
-            Algarion sedang merangkai kata...
-        </div>
-
+        <section id="chat-messages" class="chat-messages" role="log" aria-live="polite"></section>
+        <div id="typing-indicator" class="typing-indicator">Algarion sedang merangkai kata...</div>
         <form class="message-input" onsubmit="return false;">
-            <textarea 
-                id="user-input" 
-                placeholder="Tulis pesan untuk Algarion di sini..." 
-                aria-label="Input pesan chat"
-                rows="1"></textarea>
+            <textarea id="user-input" placeholder="Tulis pesan untuk Algarion..." aria-label="Input pesan chat" rows="1"></textarea>
             <button id="send-button" type="submit">Kirim</button>
         </form>
     </main>
-
     <script src="chat.js"></script>
 </body>
 </html>
