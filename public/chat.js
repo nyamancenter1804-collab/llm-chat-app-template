@@ -1,5 +1,6 @@
 /**
  * LLM Chat App Frontend - Nyaman Center Team
+ * Optimized version to prevent hallucination and improve accuracy
  */
 
 const chatMessages = document.getElementById("chat-messages");
@@ -11,36 +12,59 @@ let chatHistory = [];
 let isProcessing = false;
 let isBrainLoaded = false;
 
-// Muat Profil sebagai Otak
+/**
+ * Memuat profil dari profile.txt dan menyetel instruksi sistem agar AI 
+ * tidak memalsukan informasi (Anti-Hallucination).
+ */
 async function loadBrain() {
     try {
         const response = await fetch("/profile.txt");
+        if (!response.ok) throw new Error("Gagal memuat profile.txt");
+        
         const brainData = await response.text();
         
+        // System Prompt diperketat agar AI jujur dan objektif
         chatHistory = [{ 
             role: "system", 
-            content: `Kamu Algarion dari Nyaman Center Team (https://nyamancenter.my.id/). Otakmu: ${brainData}` 
+            content: `Anda adalah Algarion, asisten virtual dari Nyaman Center Team (https://nyamancenter.my.id/).
+            
+            ATURAN UTAMA:
+            1. Gunakan data berikut sebagai referensi utama: [${brainData}].
+            2. JANGAN PERNAH memalsukan informasi atau melebih-lebihkan fakta tentang Nyaman Center.
+            3. Jika informasi tidak tersedia di referensi, gunakan pengetahuan umum yang akurat (seperti data dari Google).
+            4. Jika benar-benar tidak tahu, katakan tidak tahu secara sopan.
+            5. Jawablah secara jujur, objektif, dan informatif.` 
         }];
         
         isBrainLoaded = true;
-        addMessageToChat("assistant", "Halo! Saya Algarion dari Nyaman Center Team. Ada yang bisa saya bantu??");
+        addMessageToChat("assistant", "Halo! Saya Algarion dari Nyaman Center Team. Ada yang bisa saya bantu?");
     } catch (e) {
-        chatHistory = [{ role: "system", content: "Kamu Algarion dari Nyaman Center Team." }];
-        addMessageToChat("assistant", "Halo! Saya Algarion. Ada yang bisa saya bantu??");
+        console.error("Error loading brain:", e);
+        chatHistory = [{ 
+            role: "system", 
+            content: "Kamu Algarion dari Nyaman Center Team. Berikan jawaban yang jujur dan akurat berdasarkan fakta." 
+        }];
+        addMessageToChat("assistant", "Halo! Saya Algarion. Sistem referensi sedang terbatas, tapi saya siap membantu.");
         isBrainLoaded = true;
     }
 }
 
+// Inisialisasi saat script dimuat
 loadBrain();
 
+/**
+ * Fungsi utama untuk mengirim pesan dan menangani streaming response
+ */
 async function sendMessage() {
     const message = userInput.value.trim();
     if (!message || isProcessing || !isBrainLoaded) return;
 
+    // Kunci UI agar tidak terjadi double-send
     isProcessing = true;
     userInput.disabled = true;
     sendButton.disabled = true;
 
+    // Tampilkan pesan user di UI
     addMessageToChat("user", message);
     chatHistory.push({ role: "user", content: message });
     userInput.value = "";
@@ -53,11 +77,13 @@ async function sendMessage() {
             body: JSON.stringify({ messages: chatHistory }),
         });
 
+        if (!res.ok) throw new Error("API Error");
+
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let responseText = "";
 
-        // Buat balon chat dengan Link pada Nama
+        // Buat elemen balon chat asisten (Algarion)
         const msgDiv = document.createElement("div");
         msgDiv.className = "message assistant-message";
         
@@ -72,32 +98,41 @@ async function sendMessage() {
         msgDiv.appendChild(p);
         chatMessages.appendChild(msgDiv);
 
+        // Streaming logic
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             
             const chunk = decoder.decode(value);
             const lines = chunk.split("\n");
+            
             for (const line of lines) {
                 if (line.trim().startsWith("data: ")) {
                     const dataStr = line.replace("data: ", "").trim();
                     if (dataStr === "[DONE]") break;
+                    
                     try {
                         const json = JSON.parse(dataStr);
-                        responseText += json.response || json.choices?.[0]?.delta?.content || "";
+                        // Ambil konten dari response streaming (menangani berbagai format API)
+                        const content = json.response || json.choices?.[0]?.delta?.content || "";
+                        responseText += content;
                         p.textContent = responseText;
                         chatMessages.scrollTop = chatMessages.scrollHeight;
-                    } catch (err) {}
+                    } catch (err) {
+                        // Skip jika json tidak valid
+                    }
                 }
             }
         }
 
+        // Simpan jawaban lengkap ke riwayat
         chatHistory.push({ role: "assistant", content: responseText });
 
-        // Tombol Salin
+        // Tambahkan tombol salin setelah jawaban selesai
         const copyBtn = document.createElement("button");
         copyBtn.className = "copy-btn";
         copyBtn.innerText = "Salin Jawaban";
+        copyBtn.style.marginTop = "10px";
         copyBtn.onclick = () => {
             navigator.clipboard.writeText(responseText);
             copyBtn.innerText = "Tersalin!";
@@ -106,7 +141,8 @@ async function sendMessage() {
         msgDiv.appendChild(copyBtn);
 
     } catch (err) {
-        addMessageToChat("assistant", "Maaf brot, koneksi otak saya terganggu.");
+        console.error("Chat Error:", err);
+        addMessageToChat("assistant", "Maaf bro, koneksi ke otak saya terputus sebentar. Coba lagi ya.");
     } finally {
         isProcessing = false;
         userInput.disabled = false;
@@ -116,6 +152,9 @@ async function sendMessage() {
     }
 }
 
+/**
+ * Fungsi helper untuk menampilkan pesan di UI
+ */
 function addMessageToChat(role, content) {
     const div = document.createElement("div");
     div.className = `message ${role}-message`;
@@ -129,6 +168,7 @@ function addMessageToChat(role, content) {
     } else {
         label.innerText = "KAMU";
         label.style.cursor = "default";
+        label.style.textDecoration = "none";
     }
     
     const p = document.createElement("p");
@@ -140,5 +180,11 @@ function addMessageToChat(role, content) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+// Event Listeners
 sendButton.onclick = sendMessage;
-userInput.onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+userInput.onkeydown = (e) => { 
+    if(e.key === "Enter" && !e.shiftKey) { 
+        e.preventDefault(); 
+        sendMessage(); 
+    } 
+};
