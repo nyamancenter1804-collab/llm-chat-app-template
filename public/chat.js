@@ -1,6 +1,6 @@
 /**
  * LLM Chat App Frontend
- * Identity Profile Loaded from profile.txt
+ * Identity Profile Loaded from profile.txt + Auto Copy Button
  */
 
 const chatMessages = document.getElementById("chat-messages");
@@ -16,11 +16,9 @@ let isProcessing = false;
  */
 async function loadAIProfile() {
 	try {
-		// Mengambil file profile.txt dari server Cloudflare Pages
 		const response = await fetch("/profile.txt");
 		const profileData = await response.text();
 		
-		// Set chatHistory awal dengan profil dari file txt
 		chatHistory = [
 			{
 				role: "system",
@@ -31,32 +29,13 @@ async function loadAIProfile() {
 				content: "Halo! Saya adalah Algarion, asisten AI yang diciptakan oleh Nyaman Center Team. Ada yang bisa saya bantu hari ini?",
 			},
 		];
-		console.log("Profile Algarion berhasil dimuat!");
+		// Pesan awal ini tidak perlu tombol copy jika kamu ingin hanya jawaban baru yang punya tombol
 	} catch (error) {
-		console.error("Gagal memuat profile.txt, menggunakan profil default.", error);
-		// Fallback jika file txt tidak ditemukan
 		chatHistory = [{ role: "system", content: "Nama kamu Algarion dari Nyaman Center Team." }];
 	}
 }
 
-// Panggil fungsi muat profil saat script dijalankan
 loadAIProfile();
-
-// --- Sisa kode logika chat tetap sama ---
-
-userInput.addEventListener("input", function () {
-	this.style.height = "auto";
-	this.style.height = this.scrollHeight + "px";
-});
-
-userInput.addEventListener("keydown", function (e) {
-	if (e.key === "Enter" && !e.shiftKey) {
-		e.preventDefault();
-		sendMessage();
-	}
-});
-
-sendButton.addEventListener("click", sendMessage);
 
 async function sendMessage() {
 	const message = userInput.value.trim();
@@ -66,7 +45,9 @@ async function sendMessage() {
 	userInput.disabled = true;
 	sendButton.disabled = true;
 
+	// User message (Tanpa tombol copy)
 	addMessageToChat("user", message);
+
 	userInput.value = "";
 	userInput.style.height = "auto";
 	typingIndicator.classList.add("visible");
@@ -74,12 +55,14 @@ async function sendMessage() {
 	chatHistory.push({ role: "user", content: message });
 
 	try {
+		// Buat elemen pesan assistant kosong dulu untuk streaming
 		const assistantMessageEl = document.createElement("div");
 		assistantMessageEl.className = "message assistant-message";
+		assistantMessageEl.setAttribute("data-sender", "Algarion");
 		assistantMessageEl.innerHTML = "<p></p>";
 		chatMessages.appendChild(assistantMessageEl);
+		
 		const assistantTextEl = assistantMessageEl.querySelector("p");
-
 		chatMessages.scrollTop = chatMessages.scrollHeight;
 
 		const response = await fetch("/api/chat", {
@@ -88,60 +71,49 @@ async function sendMessage() {
 			body: JSON.stringify({ messages: chatHistory }),
 		});
 
-		if (!response.ok) throw new Error("Failed to get response");
-		
 		const reader = response.body.getReader();
 		const decoder = new TextDecoder();
 		let responseText = "";
 		let buffer = "";
 
-		const flushAssistantText = () => {
-			assistantTextEl.textContent = responseText;
-			chatMessages.scrollTop = chatMessages.scrollHeight;
-		};
-
-		let sawDone = false;
 		while (true) {
 			const { done, value } = await reader.read();
-			if (done) {
-				const parsed = consumeSseEvents(buffer + "\n\n");
-				for (const data of parsed.events) {
-					if (data === "[DONE]") break;
-					try {
-						const jsonData = JSON.parse(data);
-						let content = jsonData.response || jsonData.choices?.[0]?.delta?.content || "";
-						if (content) {
-							responseText += content;
-							flushAssistantText();
-						}
-					} catch (e) {}
-				}
-				break;
-			}
+			if (done) break;
 
 			buffer += decoder.decode(value, { stream: true });
 			const parsed = consumeSseEvents(buffer);
 			buffer = parsed.buffer;
+
 			for (const data of parsed.events) {
-				if (data === "[DONE]") {
-					sawDone = true;
-					break;
-				}
+				if (data === "[DONE]") break;
 				try {
 					const jsonData = JSON.parse(data);
 					let content = jsonData.response || jsonData.choices?.[0]?.delta?.content || "";
 					if (content) {
 						responseText += content;
-						flushAssistantText();
+						assistantTextEl.textContent = responseText;
+						chatMessages.scrollTop = chatMessages.scrollHeight;
 					}
 				} catch (e) {}
 			}
-			if (sawDone) break;
 		}
 
+		// SETELAH SELESAI MENGETIK: Tambahkan tombol salin
 		if (responseText.length > 0) {
 			chatHistory.push({ role: "assistant", content: responseText });
+			
+			const copyBtn = document.createElement("button");
+			copyBtn.className = "copy-btn";
+			copyBtn.innerText = "Salin Jawaban";
+			copyBtn.onclick = function() {
+				navigator.clipboard.writeText(responseText).then(() => {
+					copyBtn.innerText = "Tersalin!";
+					setTimeout(() => { copyBtn.innerText = "Salin Jawaban"; }, 2000);
+				});
+			};
+			assistantMessageEl.appendChild(copyBtn);
 		}
+
 	} catch (error) {
 		console.error("Error:", error);
 		addMessageToChat("assistant", "Maaf, ada kendala teknis.");
@@ -154,10 +126,24 @@ async function sendMessage() {
 	}
 }
 
+/**
+ * Fungsi pembantu untuk tambah pesan (digunakan untuk user)
+ */
 function addMessageToChat(role, content) {
 	const messageEl = document.createElement("div");
 	messageEl.className = `message ${role}-message`;
+	messageEl.setAttribute("data-sender", role === "user" ? "Kamu" : "Algarion");
 	messageEl.innerHTML = `<p>${content}</p>`;
+	
+	// Jika assistant yang bicara lewat fungsi ini (misal saat error), beri tombol copy
+	if (role === "assistant") {
+		const copyBtn = document.createElement("button");
+		copyBtn.className = "copy-btn";
+		copyBtn.innerText = "Salin Jawaban";
+		copyBtn.onclick = () => navigator.clipboard.writeText(content);
+		messageEl.appendChild(copyBtn);
+	}
+
 	chatMessages.appendChild(messageEl);
 	chatMessages.scrollTop = chatMessages.scrollHeight;
 }
