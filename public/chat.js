@@ -1,6 +1,6 @@
 /**
- * LLM Chat App Frontend - Algarion (Gemini v1 Stable)
- * Dibuat untuk Nyaman Center Team
+ * LLM Chat App Frontend - Nyaman Center Team
+ * Optimized version to prevent hallucination and improve accuracy
  */
 
 const chatMessages = document.getElementById("chat-messages");
@@ -8,116 +8,143 @@ const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
 
-// --- KONFIGURASI API ---
-const GEMINI_API_KEY = "AIzaSyDzU2irYfJ3A3RcLW7OPp4vYhHEOvplt2A";
-// Menggunakan API v1 untuk stabilitas maksimal
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
 let chatHistory = [];
-let brainReference = "";
+let isProcessing = false;
 let isBrainLoaded = false;
 
 /**
- * Memuat profil dari profile.txt sebagai basis data Algarion
+ * Memuat profil dari profile.txt dan menyetel instruksi sistem agar AI 
+ * tidak memalsukan informasi (Anti-Hallucination).
  */
 async function loadBrain() {
     try {
         const response = await fetch("/profile.txt");
-        if (!response.ok) throw new Error("File profile.txt tidak ditemukan");
-        brainReference = await response.text();
+        if (!response.ok) throw new Error("Gagal memuat profile.txt");
+        
+        const brainData = await response.text();
+        
+        // System Prompt diperketat agar AI jujur dan objektif
+        chatHistory = [{ 
+            role: "system", 
+            content: `Anda adalah Algarion, asisten virtual dari Nyaman Center Team (https://nyamancenter.my.id/).
+            
+            ATURAN UTAMA:
+            1. Gunakan data berikut sebagai referensi utama: [${brainData}].
+            2. JANGAN PERNAH memalsukan informasi atau melebih-lebihkan fakta tentang Nyaman Center.
+            3. Jika informasi tidak tersedia di referensi, gunakan pengetahuan umum yang akurat (seperti data dari Google).
+            4. Jika benar-benar tidak tahu, katakan tidak tahu secara sopan.
+            5. Jawablah secara jujur, objektif, dan informatif.` 
+        }];
         
         isBrainLoaded = true;
-        addMessageToChat("assistant", "Halo brot! Saya Algarion dari Nyaman Center Team. Ada yang bisa saya bantu??");
+        addMessageToChat("assistant", "Halo! Saya Algarion dari Nyaman Center Team. Ada yang bisa saya bantu?");
     } catch (e) {
-        console.error("Gagal memuat otak:", e);
-        brainReference = "Nama: Algarion. Tim: Nyaman Center.";
-        addMessageToChat("assistant", "Halo brot! Saya Algarion. Sistem referensi lagi limit, tapi saya siap bantu.");
+        console.error("Error loading brain:", e);
+        chatHistory = [{ 
+            role: "system", 
+            content: "Kamu Algarion dari Nyaman Center Team. Berikan jawaban yang jujur dan akurat berdasarkan fakta." 
+        }];
+        addMessageToChat("assistant", "Halo! Saya Algarion. Sistem referensi sedang terbatas, tapi saya siap membantu.");
         isBrainLoaded = true;
     }
 }
 
-// Jalankan saat halaman dibuka
+// Inisialisasi saat script dimuat
 loadBrain();
 
 /**
- * Fungsi utama untuk mengirim pesan ke Google Gemini
+ * Fungsi utama untuk mengirim pesan dan menangani streaming response
  */
 async function sendMessage() {
     const message = userInput.value.trim();
-    if (!message || !isBrainLoaded) return;
+    if (!message || isProcessing || !isBrainLoaded) return;
 
-    // Kunci UI selama proses
+    // Kunci UI agar tidak terjadi double-send
+    isProcessing = true;
     userInput.disabled = true;
     sendButton.disabled = true;
 
-    // Tampilkan pesan user di layar
+    // Tampilkan pesan user di UI
     addMessageToChat("user", message);
+    chatHistory.push({ role: "user", content: message });
     userInput.value = "";
     typingIndicator.classList.add("visible");
 
-    // Instruksi sistem agar AI tidak ngaco dan tidak membawa info tidak relevan
-    const systemPrompt = `Kamu adalah Algarion dari Nyaman Center Team.
-    Gunakan data ini hanya sebagai referensi: [${brainReference}].
-    
-    ATURAN KETAT:
-    1. Selalu panggil pengguna dengan 'brot' atau 'teman'.
-    2. Gunakan tanda baca (titik, koma) yang benar.
-    3. Jika pertanyaan di luar profil tim, jawab secara umum dan akurat.
-    4. JANGAN menyebutkan nama anggota (Mosquito/Kiyara) atau sejarah perjuangan jika tidak ditanya khusus tentang tim.
-    5. Jika tidak tahu, katakan tidak tahu dengan jujur.`;
-
-    // Susun payload untuk Gemini API v1
-    const contents = [
-        {
-            role: "user",
-            parts: [{ text: systemPrompt }]
-        }
-    ];
-
-    // Masukkan riwayat percakapan sebelumnya
-    chatHistory.forEach(msg => {
-        contents.push({
-            role: msg.role === "assistant" ? "model" : "user",
-            parts: [{ text: msg.content }]
-        });
-    });
-
-    // Masukkan pesan terbaru dari user
-    contents.push({
-        role: "user",
-        parts: [{ text: message }]
-    });
-
     try {
-        const res = await fetch(GEMINI_URL, {
+        const res = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents })
+            body: JSON.stringify({ messages: chatHistory }),
         });
 
-        const data = await res.json();
+        if (!res.ok) throw new Error("API Error");
 
-        if (!res.ok) {
-            throw new Error(data.error?.message || "Koneksi Google Gemini terputus.");
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let responseText = "";
+
+        // Buat elemen balon chat asisten (Algarion)
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "message assistant-message";
+        
+        const label = document.createElement("a");
+        label.className = "sender-link";
+        label.innerText = "ALGARION";
+        label.href = "https://nyamancenter.my.id/";
+        label.target = "_blank";
+        
+        const p = document.createElement("p");
+        msgDiv.appendChild(label);
+        msgDiv.appendChild(p);
+        chatMessages.appendChild(msgDiv);
+
+        // Streaming logic
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value);
+            const lines = chunk.split("\n");
+            
+            for (const line of lines) {
+                if (line.trim().startsWith("data: ")) {
+                    const dataStr = line.replace("data: ", "").trim();
+                    if (dataStr === "[DONE]") break;
+                    
+                    try {
+                        const json = JSON.parse(dataStr);
+                        // Ambil konten dari response streaming (menangani berbagai format API)
+                        const content = json.response || json.choices?.[0]?.delta?.content || "";
+                        responseText += content;
+                        p.textContent = responseText;
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    } catch (err) {
+                        // Skip jika json tidak valid
+                    }
+                }
+            }
         }
 
-        // Ambil teks hasil generate dari Gemini
-        const responseText = data.candidates[0].content.parts[0].text;
-
-        // Tampilkan jawaban asisten di layar
-        addMessageToChat("assistant", responseText);
-
-        // Simpan ke riwayat chat
-        chatHistory.push({ role: "user", content: message });
+        // Simpan jawaban lengkap ke riwayat
         chatHistory.push({ role: "assistant", content: responseText });
 
-        // Batasi memori agar tidak terlalu berat (20 pesan terakhir)
-        if (chatHistory.length > 20) chatHistory.splice(0, 2);
+        // Tambahkan tombol salin setelah jawaban selesai
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "copy-btn";
+        copyBtn.innerText = "Salin Jawaban";
+        copyBtn.style.marginTop = "10px";
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(responseText);
+            copyBtn.innerText = "Tersalin!";
+            setTimeout(() => copyBtn.innerText = "Salin Jawaban", 2000);
+        };
+        msgDiv.appendChild(copyBtn);
 
     } catch (err) {
         console.error("Chat Error:", err);
-        addMessageToChat("assistant", "Waduh brot, otak saya lagi hang: " + err.message);
+        addMessageToChat("assistant", "Maaf bro, koneksi ke otak saya terputus sebentar. Coba lagi ya.");
     } finally {
+        isProcessing = false;
         userInput.disabled = false;
         sendButton.disabled = false;
         typingIndicator.classList.remove("visible");
@@ -126,13 +153,12 @@ async function sendMessage() {
 }
 
 /**
- * Fungsi untuk menampilkan balon chat di UI
+ * Fungsi helper untuk menampilkan pesan di UI
  */
 function addMessageToChat(role, content) {
     const div = document.createElement("div");
     div.className = `message ${role}-message`;
     
-    // Elemen Nama/Label
     const label = document.createElement("a");
     label.className = "sender-link";
     if (role === "assistant") {
@@ -150,22 +176,6 @@ function addMessageToChat(role, content) {
     
     div.appendChild(label);
     div.appendChild(p);
-
-    // Fitur Salin Jawaban untuk asisten
-    if (role === "assistant" && content.length > 5) {
-        const copyBtn = document.createElement("button");
-        copyBtn.className = "copy-btn";
-        copyBtn.innerText = "Salin Jawaban";
-        copyBtn.style.display = "block";
-        copyBtn.style.marginTop = "8px";
-        copyBtn.onclick = () => {
-            navigator.clipboard.writeText(content);
-            copyBtn.innerText = "Tersalin!";
-            setTimeout(() => copyBtn.innerText = "Salin Jawaban", 2000);
-        };
-        div.appendChild(copyBtn);
-    }
-
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
