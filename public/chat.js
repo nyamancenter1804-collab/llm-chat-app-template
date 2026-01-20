@@ -15,7 +15,7 @@ let chatHistory = [
 	{
 		role: "assistant",
 		content:
-			"Hello, saya adalah Algarion, apakah ada yang bisa saya bantu untuk Anda??",
+			"Halo! Saya adalah Algarion, asisten AI yang diciptakan oleh Nyaman Center Team. Ada yang bisa saya bantu hari ini?",
 	},
 ];
 let isProcessing = false;
