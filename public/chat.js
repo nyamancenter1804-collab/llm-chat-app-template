@@ -5,24 +5,36 @@ const typingIndicator = document.getElementById("typing-indicator");
 
 let chatHistory = [];
 let isProcessing = false;
+let isBrainLoaded = false;
 
-// Muat Profil dari profile.txt
-async function loadAIProfile() {
+// Fungsi untuk memuat "Otak" (profile.txt)
+async function loadBrain() {
     try {
         const response = await fetch("/profile.txt");
-        const profileData = await response.text();
-        chatHistory = [{ role: "system", content: `Kamu Algarion dari Nyaman Center Team. Aturan: ${profileData}` }];
-        addMessageToChat("assistant", "Halo! Saya Algarion dari Nyaman Center Team. Ada yang bisa saya bantu??");
+        if (!response.ok) throw new Error("File otak tidak ditemukan");
+        const brainData = await response.text();
+        
+        // Memasukkan data otak ke dalam System Prompt yang permanen
+        chatHistory = [{ 
+            role: "system", 
+            content: `Kamu adalah Algarion, AI buatan Nyaman Center Team. Gunakan informasi berikut sebagai otak dan basis pengetahuanmu: ${brainData}. Selalu gunakan tanda baca lengkap (. , ! ?).` 
+        }];
+        
+        isBrainLoaded = true;
+        addMessageToChat("assistant", "Halo! Otak saya sudah siap. Saya Algarion dari Nyaman Center Team. Ada yang bisa saya bantu??");
     } catch (e) {
-        chatHistory = [{ role: "system", content: "Kamu Algarion dari Nyaman Center Team." }];
-        addMessageToChat("assistant", "Halo! Ada yang bisa saya bantu??");
+        console.error("Gagal memuat otak:", e);
+        chatHistory = [{ role: "system", content: "Kamu adalah Algarion dari Nyaman Center Team." }];
+        addMessageToChat("assistant", "Halo! Saya Algarion. Sepertinya ada bagian memori saya yang tertinggal, tapi saya siap membantu!");
+        isBrainLoaded = true; 
     }
 }
-loadAIProfile();
+
+loadBrain();
 
 async function sendMessage() {
     const message = userInput.value.trim();
-    if (!message || isProcessing) return;
+    if (!message || isProcessing || !isBrainLoaded) return;
 
     isProcessing = true;
     userInput.disabled = true;
@@ -37,14 +49,13 @@ async function sendMessage() {
         const res = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: chatHistory }),
+            body: JSON.stringify({ messages: chatHistory }), // Mengirim seluruh history termasuk otak
         });
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let responseText = "";
 
-        // Buat balon chat assistant kosong dulu
         const msgDiv = document.createElement("div");
         msgDiv.className = "message assistant-message";
         msgDiv.setAttribute("data-sender", "Algarion");
@@ -57,10 +68,11 @@ async function sendMessage() {
             if (done) break;
             
             const chunk = decoder.decode(value);
+            // Membersihkan data stream agar lebih akurat
             const lines = chunk.split("\n");
             for (const line of lines) {
-                if (line.startsWith("data: ")) {
-                    const dataStr = line.slice(6);
+                if (line.trim().startsWith("data: ")) {
+                    const dataStr = line.replace("data: ", "").trim();
                     if (dataStr === "[DONE]") break;
                     try {
                         const json = JSON.parse(dataStr);
@@ -73,7 +85,10 @@ async function sendMessage() {
             }
         }
 
-        // Tambah tombol salin setelah selesai
+        // Simpan jawaban asisten ke history agar ingatan berlanjut
+        chatHistory.push({ role: "assistant", content: responseText });
+
+        // Tambahkan tombol salin
         const copyBtn = document.createElement("button");
         copyBtn.className = "copy-btn";
         copyBtn.innerText = "Salin Jawaban";
@@ -83,10 +98,9 @@ async function sendMessage() {
             setTimeout(() => copyBtn.innerText = "Salin Jawaban", 2000);
         };
         msgDiv.appendChild(copyBtn);
-        chatHistory.push({ role: "assistant", content: responseText });
 
     } catch (err) {
-        addMessageToChat("assistant", "Maaf, koneksi terputus.");
+        addMessageToChat("assistant", "Maaf brot, koneksi otak saya terganggu.");
     } finally {
         isProcessing = false;
         userInput.disabled = false;
