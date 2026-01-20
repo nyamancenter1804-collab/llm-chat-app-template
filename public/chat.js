@@ -1,35 +1,54 @@
 /**
  * LLM Chat App Frontend
- * Edited for Nyaman Center Team
+ * Identity Profile Loaded from profile.txt
  */
 
-// DOM elements
 const chatMessages = document.getElementById("chat-messages");
 const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
 
-// Chat state - Identitas diperkuat di sini
-let chatHistory = [
-	{
-		role: "system",
-		content: "Nama kamu adalah Algarion. Kamu adalah asisten AI yang diciptakan oleh Nyaman Center Team. Kamu harus selalu menggunakan tanda baca yang lengkap seperti koma (,), titik (.), tanda seru (!), dan tanda tanya (?). Selalu ingat bahwa penciptamu adalah Nyaman Center Team."
-	},
-	{
-		role: "assistant",
-		content:
-			"Halo! Saya adalah Algarion, asisten AI yang diciptakan oleh Nyaman Center Team. Ada yang bisa saya bantu hari ini?",
-	},
-];
+let chatHistory = [];
 let isProcessing = false;
 
-// Auto-resize textarea as user types
+/**
+ * Fungsi untuk mengambil profil dari file .txt
+ */
+async function loadAIProfile() {
+	try {
+		// Mengambil file profile.txt dari server Cloudflare Pages
+		const response = await fetch("/profile.txt");
+		const profileData = await response.text();
+		
+		// Set chatHistory awal dengan profil dari file txt
+		chatHistory = [
+			{
+				role: "system",
+				content: `Kamu adalah Algarion. Ini adalah profil dan aturan kamu: ${profileData}`
+			},
+			{
+				role: "assistant",
+				content: "Halo! Saya adalah Algarion, asisten AI yang diciptakan oleh Nyaman Center Team. Ada yang bisa saya bantu hari ini?",
+			},
+		];
+		console.log("Profile Algarion berhasil dimuat!");
+	} catch (error) {
+		console.error("Gagal memuat profile.txt, menggunakan profil default.", error);
+		// Fallback jika file txt tidak ditemukan
+		chatHistory = [{ role: "system", content: "Nama kamu Algarion dari Nyaman Center Team." }];
+	}
+}
+
+// Panggil fungsi muat profil saat script dijalankan
+loadAIProfile();
+
+// --- Sisa kode logika chat tetap sama ---
+
 userInput.addEventListener("input", function () {
 	this.style.height = "auto";
 	this.style.height = this.scrollHeight + "px";
 });
 
-// Send message on Enter (without Shift)
 userInput.addEventListener("keydown", function (e) {
 	if (e.key === "Enter" && !e.shiftKey) {
 		e.preventDefault();
@@ -37,15 +56,10 @@ userInput.addEventListener("keydown", function (e) {
 	}
 });
 
-// Send button click handler
 sendButton.addEventListener("click", sendMessage);
 
-/**
- * Sends a message to the chat API and processes the response
- */
 async function sendMessage() {
 	const message = userInput.value.trim();
-
 	if (message === "" || isProcessing) return;
 
 	isProcessing = true;
@@ -53,10 +67,8 @@ async function sendMessage() {
 	sendButton.disabled = true;
 
 	addMessageToChat("user", message);
-
 	userInput.value = "";
 	userInput.style.height = "auto";
-
 	typingIndicator.classList.add("visible");
 
 	chatHistory.push({ role: "user", content: message });
@@ -72,17 +84,11 @@ async function sendMessage() {
 
 		const response = await fetch("/api/chat", {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				messages: chatHistory,
-			}),
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ messages: chatHistory }),
 		});
 
-		if (!response.ok) {
-			throw new Error("Failed to get response");
-		}
+		if (!response.ok) throw new Error("Failed to get response");
 		
 		const reader = response.body.getReader();
 		const decoder = new TextDecoder();
@@ -97,7 +103,6 @@ async function sendMessage() {
 		let sawDone = false;
 		while (true) {
 			const { done, value } = await reader.read();
-
 			if (done) {
 				const parsed = consumeSseEvents(buffer + "\n\n");
 				for (const data of parsed.events) {
@@ -139,7 +144,7 @@ async function sendMessage() {
 		}
 	} catch (error) {
 		console.error("Error:", error);
-		addMessageToChat("assistant", "Maaf, terjadi kesalahan saat memproses permintaan Anda.");
+		addMessageToChat("assistant", "Maaf, ada kendala teknis.");
 	} finally {
 		typingIndicator.classList.remove("visible");
 		isProcessing = false;
