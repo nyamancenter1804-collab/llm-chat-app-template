@@ -1,3 +1,7 @@
+/**
+ * LLM Chat App Frontend - Nyaman Center Team
+ */
+
 const chatMessages = document.getElementById("chat-messages");
 const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
@@ -7,26 +11,23 @@ let chatHistory = [];
 let isProcessing = false;
 let isBrainLoaded = false;
 
-// Fungsi untuk memuat "Otak" (profile.txt)
+// Muat Profil sebagai Otak
 async function loadBrain() {
     try {
         const response = await fetch("/profile.txt");
-        if (!response.ok) throw new Error("File otak tidak ditemukan");
         const brainData = await response.text();
         
-        // Memasukkan data otak ke dalam System Prompt yang permanen
         chatHistory = [{ 
             role: "system", 
-            content: `Kamu adalah Algarion, AI buatan Nyaman Center Team. Gunakan informasi berikut sebagai otak dan basis pengetahuanmu: ${brainData}. Selalu gunakan tanda baca lengkap (. , ! ?).` 
+            content: `Kamu Algarion dari Nyaman Center Team (https://nyamancenter.my.id/). Otakmu: ${brainData}` 
         }];
         
         isBrainLoaded = true;
-        addMessageToChat("assistant", "Halo! Otak saya sudah siap. Saya Algarion dari Nyaman Center Team. Ada yang bisa saya bantu??");
+        addMessageToChat("assistant", "Halo! Saya Algarion dari Nyaman Center Team. Ada yang bisa saya bantu??");
     } catch (e) {
-        console.error("Gagal memuat otak:", e);
-        chatHistory = [{ role: "system", content: "Kamu adalah Algarion dari Nyaman Center Team." }];
-        addMessageToChat("assistant", "Halo! Saya Algarion. Sepertinya ada bagian memori saya yang tertinggal, tapi saya siap membantu!");
-        isBrainLoaded = true; 
+        chatHistory = [{ role: "system", content: "Kamu Algarion dari Nyaman Center Team." }];
+        addMessageToChat("assistant", "Halo! Saya Algarion. Ada yang bisa saya bantu??");
+        isBrainLoaded = true;
     }
 }
 
@@ -49,17 +50,25 @@ async function sendMessage() {
         const res = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: chatHistory }), // Mengirim seluruh history termasuk otak
+            body: JSON.stringify({ messages: chatHistory }),
         });
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let responseText = "";
 
+        // Buat balon chat dengan Link pada Nama
         const msgDiv = document.createElement("div");
         msgDiv.className = "message assistant-message";
-        msgDiv.setAttribute("data-sender", "Algarion");
+        
+        const label = document.createElement("a");
+        label.className = "sender-link";
+        label.innerText = "ALGARION";
+        label.href = "https://nyamancenter.my.id/";
+        label.target = "_blank";
+        
         const p = document.createElement("p");
+        msgDiv.appendChild(label);
         msgDiv.appendChild(p);
         chatMessages.appendChild(msgDiv);
 
@@ -68,7 +77,6 @@ async function sendMessage() {
             if (done) break;
             
             const chunk = decoder.decode(value);
-            // Membersihkan data stream agar lebih akurat
             const lines = chunk.split("\n");
             for (const line of lines) {
                 if (line.trim().startsWith("data: ")) {
@@ -76,8 +84,7 @@ async function sendMessage() {
                     if (dataStr === "[DONE]") break;
                     try {
                         const json = JSON.parse(dataStr);
-                        const content = json.response || json.choices?.[0]?.delta?.content || "";
-                        responseText += content;
+                        responseText += json.response || json.choices?.[0]?.delta?.content || "";
                         p.textContent = responseText;
                         chatMessages.scrollTop = chatMessages.scrollHeight;
                     } catch (err) {}
@@ -85,10 +92,9 @@ async function sendMessage() {
             }
         }
 
-        // Simpan jawaban asisten ke history agar ingatan berlanjut
         chatHistory.push({ role: "assistant", content: responseText });
 
-        // Tambahkan tombol salin
+        // Tombol Salin
         const copyBtn = document.createElement("button");
         copyBtn.className = "copy-btn";
         copyBtn.innerText = "Salin Jawaban";
@@ -113,8 +119,23 @@ async function sendMessage() {
 function addMessageToChat(role, content) {
     const div = document.createElement("div");
     div.className = `message ${role}-message`;
-    div.setAttribute("data-sender", role === "user" ? "Kamu" : "Algarion");
-    div.innerHTML = `<p>${content}</p>`;
+    
+    const label = document.createElement("a");
+    label.className = "sender-link";
+    if (role === "assistant") {
+        label.innerText = "ALGARION";
+        label.href = "https://nyamancenter.my.id/";
+        label.target = "_blank";
+    } else {
+        label.innerText = "KAMU";
+        label.style.cursor = "default";
+    }
+    
+    const p = document.createElement("p");
+    p.textContent = content;
+    
+    div.appendChild(label);
+    div.appendChild(p);
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
