@@ -164,7 +164,7 @@ async function sendMessage() {
         userInput.disabled = false;
         sendButton.disabled = false;
         typingIndicator.classList.remove("visible");
-        userInput.focus();
+        // userInput.focus(); -> Dihapus agar tidak mencuri fokus kursor NVDA
     }
 }
 
