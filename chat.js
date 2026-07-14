@@ -94,6 +94,10 @@ async function sendMessage() {
         label.target = "_blank";
         
         const p = document.createElement("p");
+        // Beri tahu pengguna (terutama pembaca layar) bahwa agen sedang mengetik
+        p.textContent = "Algarion sedang mengetik...";
+        p.setAttribute("aria-live", "polite");
+        
         msgDiv.appendChild(label);
         msgDiv.appendChild(p);
         chatMessages.appendChild(msgDiv);
@@ -113,10 +117,11 @@ async function sendMessage() {
                     
                     try {
                         const json = JSON.parse(dataStr);
-                        // Ambil konten dari response streaming (menangani berbagai format API)
+                        // Ambil konten dari response streaming
                         const content = json.response || json.choices?.[0]?.delta?.content || "";
                         responseText += content;
-                        p.textContent = responseText;
+                        
+                        // JANGAN update p.textContent di sini agar screen reader tidak nyepam (spamming)
                         chatMessages.scrollTop = chatMessages.scrollHeight;
                     } catch (err) {
                         // Skip jika json tidak valid
@@ -125,7 +130,8 @@ async function sendMessage() {
             }
         }
 
-        // Simpan jawaban lengkap ke riwayat
+        // Simpan jawaban lengkap ke riwayat dan tampilkan di UI secara utuh sekaligus
+        p.textContent = responseText;
         chatHistory.push({ role: "assistant", content: responseText });
 
         // Tambahkan tombol salin setelah jawaban selesai
