@@ -7,11 +7,35 @@ const chatMessages = document.getElementById("chat-messages");
 const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
-const uploadContainer = document.getElementById("upload-container");
 
 let chatHistory = [];
 let isProcessing = false;
 let isBrainLoaded = false;
+let currentImageBase64 = null;
+let isAdvancedAIEnabled = false;
+
+const btnToggleAdvanced = document.getElementById("btn-toggle-advanced");
+const imageUpload = document.getElementById("image-upload");
+const uploadContainer = document.getElementById("upload-container");
+const imageNameDisplay = document.getElementById("image-name-display");
+
+btnToggleAdvanced.addEventListener("click", () => {
+    isAdvancedAIEnabled = !isAdvancedAIEnabled;
+    btnToggleAdvanced.setAttribute("aria-pressed", isAdvancedAIEnabled);
+    
+    if (isAdvancedAIEnabled) {
+        btnToggleAdvanced.style.background = "var(--primary-color)";
+        btnToggleAdvanced.style.color = "white";
+        uploadContainer.style.display = "block";
+    } else {
+        btnToggleAdvanced.style.background = "white";
+        btnToggleAdvanced.style.color = "var(--primary-color)";
+        uploadContainer.style.display = "none";
+        imageUpload.value = "";
+        imageNameDisplay.textContent = "";
+        currentImageBase64 = null;
+    }
+});
 
 /**
  * Memuat profil dari profile.txt dan menyetel instruksi sistem agar AI 
@@ -72,10 +96,15 @@ async function sendMessage() {
     typingIndicator.classList.add("visible");
 
     try {
+        const payload = { messages: chatHistory };
+        if (currentImageBase64 && isAdvancedAIEnabled) {
+            payload.imageBase64 = currentImageBase64;
+        }
+
         const res = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: chatHistory }),
+            body: JSON.stringify(payload),
         });
 
         if (!res.ok) throw new Error("API Error");
