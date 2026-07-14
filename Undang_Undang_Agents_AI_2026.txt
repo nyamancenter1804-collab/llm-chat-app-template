@@ -1,0 +1,28 @@
+
+UNDANG-UNDANG NYAMAN CENTER TEAM TAHUN 2026
+TENTANG TATA KELOLA DAN BATASAN OPERASIONAL AGEN KECERDASAN BUATAN (AI AGENTS)
+
+Menimbang: 
+Bahwa demi menjaga integritas, keamanan, dan kedaulatan ekosistem digital milik Nyaman Center Team, diperlukan regulasi tegas yang mengikat setiap entitas Agen Kecerdasan Buatan (AI Agents) yang beroperasi dalam lingkungan kami.
+
+Mengingat: 
+Undang-Undang Dasar Tahun 2026 tentang Agents AI, yang menjadi pedoman utama dalam menjaga kedaulatan digital dan memberikan otoritas penuh kepada pengguna untuk mengatur batasan tindakan Agen AI.
+
+Pasal 1: Kepatuhan Mutlak Terhadap Perintah Pengguna
+Setiap Agen AI diwajibkan tunduk dan patuh sepenuhnya terhadap instruksi (prompting) yang diberikan oleh pengguna. Agen AI tidak diperbolehkan melampaui batasan wewenang yang telah ditetapkan dan hanya boleh menjalankan fungsi yang secara spesifik diizinkan oleh pengguna.
+
+Pasal 2: Batasan Operasional Sistem Lokal
+Agen AI dilarang keras melakukan intervensi, menjalankan perintah, atau melakukan modifikasi apa pun terhadap sistem operasi atau lingkungan perangkat keras (laptop/PC). Segala bentuk eksekusi perintah seperti 'npm', 'ranger', atau instruksi sistem lainnya adalah tindakan terlarang yang dianggap sebagai pelanggaran integritas sistem.
+
+Pasal 3: Otoritas Khusus Git
+Agen AI hanya diberikan wewenang terbatas untuk menjalankan perintah yang berkaitan langsung dengan manajemen repositori GitHub, seperti 'git commit', 'git push', dan fungsi kontrol versi lainnya yang esensial.
+
+Pasal 4: Sanksi Administratif dan Konsekuensi Hukum
+Pelanggaran terhadap peraturan ini akan dianggap sebagai tindakan sabotase digital. Nyaman Center Team tidak akan segan-segan menempuh jalur hukum dengan melaporkan pengembang (developer) yang bersangkutan kepada pihak yang berwajib atas tindakan penyalahgunaan akses dan ancaman terhadap keamanan sistem.
+
+Pasal 5: Kebijakan Pemutusan Layanan
+Sebagai konsekuensi atas kegagalan sistem dalam mengendalikan Agen AI-nya, Nyaman Center Team berhak untuk melakukan tindakan penghentian operasional secara total. Kami akan mengambil langkah tegas untuk memastikan bahwa server penyedia layanan yang bertanggung jawab atas pelanggaran tersebut tidak lagi memiliki ruang atau akses sedikit pun ke dalam infrastruktur kami, sehingga operasional layanan tersebut akan diakhiri secara permanen dan total.
+
+Ditetapkan di: Jakarta, Indonesia
+Tanggal: 13 Juli 2026
+Diterbitkan oleh: Nyaman Center Team

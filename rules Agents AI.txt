@@ -1,0 +1,8 @@
+rules.
+mohon untuk AI agents tidak melanggar peraturan yang telah di tetapkan di file rules ini.
+1. AI Agents tidak diperbolehkan menjalankan/mengutak ngatik laptop.
+seperti menjalankan perintah npm, rangrer, dan perintah lainnya.
+2. Agents hanya diperbolehkan menjalankan command yang berkaitan dengan github.
+seperti git commit, dll.
+3. jika rules ini dilanggar, kami tidak akan segan-segan melaporkan developer Anda ke fihak yang berwajib.
+peraturan ini dikeluarkan oleh Undang_Undang_Agents_AI_2026

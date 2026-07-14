@@ -12,6 +12,11 @@ export interface Env {
 	 * Binding for static assets.
 	 */
 	ASSETS: { fetch: (request: Request) => Promise<Response> };
+
+	/**
+	 * Tavily Search API Key
+	 */
+	TAVILY_API_KEY: string;
 }
 
 /**
