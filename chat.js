@@ -11,6 +11,40 @@ const typingIndicator = document.getElementById("typing-indicator");
 let chatHistory = [];
 let isProcessing = false;
 let isBrainLoaded = false;
+let currentImageBase64 = null;
+
+const advancedToggle = document.getElementById("advanced-ai-toggle");
+const imageUpload = document.getElementById("image-upload");
+const btnUploadTrigger = document.getElementById("btn-upload-trigger");
+const imageNameDisplay = document.getElementById("image-name-display");
+
+advancedToggle.addEventListener("change", (e) => {
+    if (e.target.checked) {
+        btnUploadTrigger.style.display = "inline-block";
+    } else {
+        btnUploadTrigger.style.display = "none";
+        imageUpload.value = "";
+        imageNameDisplay.textContent = "";
+        currentImageBase64 = null;
+    }
+});
+
+btnUploadTrigger.addEventListener("click", () => {
+    imageUpload.click();
+});
+
+imageUpload.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        imageNameDisplay.textContent = "Foto: " + file.name;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const base64str = evt.target.result.split(',')[1];
+            currentImageBase64 = base64str;
+        };
+        reader.readAsDataURL(file);
+    }
+});
 
 /**
  * Memuat profil dari profile.txt dan menyetel instruksi sistem agar AI 
@@ -71,10 +105,15 @@ async function sendMessage() {
     typingIndicator.classList.add("visible");
 
     try {
+        const payload = { messages: chatHistory };
+        if (currentImageBase64 && advancedToggle.checked) {
+            payload.imageBase64 = currentImageBase64;
+        }
+
         const res = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: chatHistory }),
+            body: JSON.stringify(payload),
         });
 
         if (!res.ok) throw new Error("API Error");
@@ -164,7 +203,13 @@ async function sendMessage() {
         userInput.disabled = false;
         sendButton.disabled = false;
         typingIndicator.classList.remove("visible");
-        // userInput.focus(); -> Dihapus agar tidak mencuri fokus kursor NVDA
+        
+        // Reset image setelah dikirim
+        if (currentImageBase64) {
+            imageUpload.value = "";
+            imageNameDisplay.textContent = "";
+            currentImageBase64 = null;
+        }
     }
 }
 
