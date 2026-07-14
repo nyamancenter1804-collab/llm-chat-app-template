@@ -142,12 +142,14 @@
     <main class="chat-container">
         <!-- Advanced AI Bar -->
         <div class="advanced-ai-bar" style="padding: 10px 1.5rem; background: #fff; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <input type="checkbox" id="advanced-ai-toggle" aria-label="Aktifkan Advanced AI">
+            <input type="checkbox" id="advanced-ai-toggle">
             <label for="advanced-ai-toggle" style="font-weight: bold; font-size: 0.9rem;">Gunakan Advanced AI (Bisa Baca Gambar)</label>
             
-            <input type="file" id="image-upload" accept="image/*" style="display: none;" aria-label="Pilih foto untuk dianalisis">
-            <button id="btn-upload-trigger" style="display: none; padding: 4px 10px; cursor: pointer; border-radius: 4px; border: 1px solid var(--border-color); background: #eee; font-size: 0.8rem;">Pilih Foto</button>
-            <span id="image-name-display" style="font-size: 0.8rem; color: var(--text-light); font-weight: bold;"></span>
+            <div id="upload-container" style="display: none; width: 100%; padding-top: 5px; border-top: 1px dashed var(--border-color);">
+                <label for="image-upload" style="font-size: 0.85rem; font-weight: bold; display: block; margin-bottom: 5px;">Pilih foto dari komputer Anda:</label>
+                <input type="file" id="image-upload" accept="image/*" style="display: block;">
+                <span id="image-name-display" style="font-size: 0.8rem; color: var(--primary-color); font-weight: bold; display: block; margin-top: 5px;" aria-live="polite"></span>
+            </div>
         </div>
         
         <section id="chat-messages" class="chat-messages" role="log" aria-live="off"></section>
@@ -157,6 +159,6 @@
             <button id="send-button" type="submit">Kirim</button>
         </form>
     </main>
-    <script src="chat.js?v=2"></script>
+    <script src="chat.js?v=3"></script>
 </body>
 </html>
