@@ -93,10 +93,19 @@ async function sendMessage() {
         label.href = "https://nyamancenter.my.id/";
         label.target = "_blank";
         
+        // Elemen khusus untuk pengumuman pembaca layar (Screen Reader)
+        const srAnnouncer = document.createElement("div");
+        srAnnouncer.setAttribute("aria-live", "polite");
+        srAnnouncer.style.position = "absolute";
+        srAnnouncer.style.width = "1px";
+        srAnnouncer.style.height = "1px";
+        srAnnouncer.style.overflow = "hidden";
+        srAnnouncer.textContent = "Algarion sedang mengetik...";
+        
         const p = document.createElement("p");
-        // Beri tahu pengguna (terutama pembaca layar) bahwa agen sedang mengetik
-        p.textContent = "Algarion sedang mengetik...";
-        p.setAttribute("aria-live", "polite");
+        p.textContent = "Sedang mengetik...";
+        
+        msgDiv.appendChild(srAnnouncer);
         
         msgDiv.appendChild(label);
         msgDiv.appendChild(p);
@@ -130,7 +139,8 @@ async function sendMessage() {
             }
         }
 
-        // Simpan jawaban lengkap ke riwayat dan tampilkan di UI secara utuh sekaligus
+        // Update pengumuman pembaca layar dan tampilkan teks utuh
+        srAnnouncer.textContent = "Algarion membalas.";
         p.textContent = responseText;
         chatHistory.push({ role: "assistant", content: responseText });
 
