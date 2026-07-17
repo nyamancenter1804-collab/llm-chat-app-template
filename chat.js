@@ -18,9 +18,25 @@ const imageUpload = document.getElementById("image-upload");
 const btnUploadTrigger = document.getElementById("btn-upload-trigger");
 const imageNameDisplay = document.getElementById("image-name-display");
 
+let advancedAIUnlocked = false;
+const ADVANCED_AI_PASSWORD = "AlgarionGanteng6969";
+
 advancedToggle.addEventListener("change", (e) => {
     if (e.target.checked) {
-        btnUploadTrigger.style.display = "inline-block";
+        // Require password before enabling Advanced AI
+        if (!advancedAIUnlocked) {
+            const enteredPassword = prompt("Masukkan password untuk mengaktifkan Advanced AI:");
+            if (enteredPassword === ADVANCED_AI_PASSWORD) {
+                advancedAIUnlocked = true;
+                btnUploadTrigger.style.display = "inline-block";
+            } else {
+                // Wrong password - reset toggle and block access
+                e.target.checked = false;
+                alert("Password salah! Advanced AI tetap nonaktif.");
+            }
+        } else {
+            btnUploadTrigger.style.display = "inline-block";
+        }
     } else {
         btnUploadTrigger.style.display = "none";
         imageUpload.value = "";
