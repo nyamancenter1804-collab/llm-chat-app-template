@@ -13,7 +13,7 @@ let isProcessing = false;
 let isBrainLoaded = false;
 let currentImageBase64 = null;
 
-const advancedToggle = document.getElementById("advanced-ai-toggle");
+const advancedToggle = document.getElementById("btn-toggle-advanced");
 const imageUpload = document.getElementById("image-upload");
 const btnUploadTrigger = document.getElementById("btn-upload-trigger");
 const imageNameDisplay = document.getElementById("image-name-display");
