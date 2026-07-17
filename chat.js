@@ -16,6 +16,7 @@ let currentImageBase64 = null;
 let advancedAIUnlocked = false;
 
 // Get password UI elements
+const advancedToggle = document.getElementById("btn-toggle-advanced");
 const passwordContainer = document.getElementById("password-container");
 const passwordInput = document.getElementById("advanced-password");
 const submitPasswordBtn = document.getElementById("btn-submit-password");
@@ -54,7 +55,6 @@ submitPasswordBtn.onclick = async () => {
         if (res.ok) {
             advancedAIUnlocked = true;
             passwordContainer.style.display = "none";
-            uploadContainer.style.display = "block";
             passwordError.style.display = "none";
             passwordInput.value = "";
         } else {
