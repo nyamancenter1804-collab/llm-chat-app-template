@@ -143,7 +143,10 @@ async function sendMessage() {
     typingIndicator.classList.add("visible");
 
     try {
-        const payload = { messages: chatHistory };
+        const payload = {
+            messages: chatHistory,
+            isAdvanced: advancedAIUnlocked // Send flag to backend
+        };
 
         const res = await fetch("/api/chat", {
             method: "POST",
