@@ -22,8 +22,11 @@ const passwordInput = document.getElementById("advanced-password");
 const submitPasswordBtn = document.getElementById("btn-submit-password");
 const passwordError = document.getElementById("password-error");
 
-advancedToggle.addEventListener("change", (e) => {
-    if (e.target.checked) {
+let advancedAIShown = false;
+
+advancedToggle.onclick = () => {
+    advancedAIShown = !advancedAIShown;
+    if (advancedAIShown) {
         if (!advancedAIUnlocked) {
             passwordContainer.style.display = "block";
             passwordInput.focus();
@@ -33,7 +36,7 @@ advancedToggle.addEventListener("change", (e) => {
         passwordInput.value = "";
         passwordError.style.display = "none";
     }
-});
+};
 
 // Handle password submission - validate via server
 submitPasswordBtn.onclick = async () => {
