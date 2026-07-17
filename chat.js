@@ -13,11 +13,6 @@ let isProcessing = false;
 let isBrainLoaded = false;
 let currentImageBase64 = null;
 
-const advancedToggle = document.getElementById("btn-toggle-advanced");
-const imageUpload = document.getElementById("image-upload");
-const btnUploadTrigger = document.getElementById("btn-upload-trigger");
-const imageNameDisplay = document.getElementById("image-name-display");
-
 let advancedAIUnlocked = false;
 
 // Get password UI elements
@@ -25,29 +20,17 @@ const passwordContainer = document.getElementById("password-container");
 const passwordInput = document.getElementById("advanced-password");
 const submitPasswordBtn = document.getElementById("btn-submit-password");
 const passwordError = document.getElementById("password-error");
-const uploadContainer = document.getElementById("upload-container");
 
 advancedToggle.addEventListener("change", (e) => {
     if (e.target.checked) {
-        // Require password before enabling Advanced AI
         if (!advancedAIUnlocked) {
-            // Show password input field (accessible for NVDA)
             passwordContainer.style.display = "block";
             passwordInput.focus();
-        } else {
-            // Already unlocked this session
-            passwordContainer.style.display = "none";
-            uploadContainer.style.display = "block";
         }
     } else {
-        // Reset everything when toggled off
         passwordContainer.style.display = "none";
-        uploadContainer.style.display = "none";
         passwordInput.value = "";
         passwordError.style.display = "none";
-        imageUpload.value = "";
-        imageNameDisplay.textContent = "";
-        currentImageBase64 = null;
     }
 });
 
@@ -93,22 +76,7 @@ passwordInput.onkeydown = (e) => {
     }
 };
 
-btnUploadTrigger.addEventListener("click", () => {
-    imageUpload.click();
-});
 
-imageUpload.addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        imageNameDisplay.textContent = "Foto: " + file.name;
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-            const base64str = evt.target.result.split(',')[1];
-            currentImageBase64 = base64str;
-        };
-        reader.readAsDataURL(file);
-    }
-});
 
 /**
  * Memuat profil dari profile.txt dan menyetel instruksi sistem agar AI 
@@ -170,9 +138,6 @@ async function sendMessage() {
 
     try {
         const payload = { messages: chatHistory };
-        if (currentImageBase64 && advancedToggle.checked) {
-            payload.imageBase64 = currentImageBase64;
-        }
 
         const res = await fetch("/api/chat", {
             method: "POST",
@@ -267,13 +232,6 @@ async function sendMessage() {
         userInput.disabled = false;
         sendButton.disabled = false;
         typingIndicator.classList.remove("visible");
-        
-        // Reset image setelah dikirim
-        if (currentImageBase64) {
-            imageUpload.value = "";
-            imageNameDisplay.textContent = "";
-            currentImageBase64 = null;
-        }
     }
 }
 
