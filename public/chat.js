@@ -1,5 +1,4 @@
-/**
- * LLM Chat App Frontend - Nyaman Center Team
+/** * LLM Chat App Frontend - Nyaman Center Team
  * Optimized version to prevent hallucination and improve accuracy
  */
 
@@ -12,30 +11,73 @@ let chatHistory = [];
 let isProcessing = false;
 let isBrainLoaded = false;
 let currentImageBase64 = null;
-let isAdvancedAIEnabled = false;
 
-const btnToggleAdvanced = document.getElementById("btn-toggle-advanced");
-const imageUpload = document.getElementById("image-upload");
-const uploadContainer = document.getElementById("upload-container");
-const imageNameDisplay = document.getElementById("image-name-display");
+let advancedAIUnlocked = false;
 
-btnToggleAdvanced.addEventListener("click", () => {
-    isAdvancedAIEnabled = !isAdvancedAIEnabled;
-    btnToggleAdvanced.setAttribute("aria-pressed", isAdvancedAIEnabled);
-    
-    if (isAdvancedAIEnabled) {
-        btnToggleAdvanced.style.background = "var(--primary-color)";
-        btnToggleAdvanced.style.color = "white";
-        uploadContainer.style.display = "block";
+// Get password UI elements
+const advancedToggle = document.getElementById("btn-toggle-advanced");
+const passwordContainer = document.getElementById("password-container");
+const passwordInput = document.getElementById("advanced-password");
+const submitPasswordBtn = document.getElementById("btn-submit-password");
+const passwordError = document.getElementById("password-error");
+
+let advancedAIShown = false;
+
+advancedToggle.onclick = () => {
+    advancedAIShown = !advancedAIShown;
+    if (advancedAIShown) {
+        if (!advancedAIUnlocked) {
+            passwordContainer.style.display = "block";
+            passwordInput.focus();
+        }
     } else {
-        btnToggleAdvanced.style.background = "white";
-        btnToggleAdvanced.style.color = "var(--primary-color)";
-        uploadContainer.style.display = "none";
-        imageUpload.value = "";
-        imageNameDisplay.textContent = "";
-        currentImageBase64 = null;
+        passwordContainer.style.display = "none";
+        passwordInput.value = "";
+        passwordError.style.display = "none";
     }
-});
+};
+
+// Handle password submission - validate via server
+submitPasswordBtn.onclick = async () => {
+    const entered = passwordInput.value.trim();
+    if (!entered) {
+        passwordError.style.display = "block";
+        passwordInput.focus();
+        return;
+    }
+    
+    try {
+        // Send password to server for validation
+        const res = await fetch("/api/verify-advanced", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: entered })
+        });
+        
+        if (res.ok) {
+            advancedAIUnlocked = true;
+            passwordContainer.style.display = "none";
+            passwordError.style.display = "none";
+            passwordInput.value = "";
+        } else {
+            passwordError.style.display = "block";
+            passwordInput.value = "";
+            passwordInput.focus();
+        }
+    } catch (err) {
+        console.error("Password verification failed", err);
+        passwordError.style.display = "block";
+    }
+};
+
+// Allow Enter key in password field
+passwordInput.onkeydown = (e) => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        submitPasswordBtn.click();
+    }
+};
+
 
 /**
  * Memuat profil dari profile.txt dan menyetel instruksi sistem agar AI 
@@ -97,9 +139,6 @@ async function sendMessage() {
 
     try {
         const payload = { messages: chatHistory };
-        if (currentImageBase64 && isAdvancedAIEnabled) {
-            payload.imageBase64 = currentImageBase64;
-        }
 
         const res = await fetch("/api/chat", {
             method: "POST",
@@ -123,7 +162,20 @@ async function sendMessage() {
         label.href = "https://nyamancenter.my.id/";
         label.target = "_blank";
         
+        // Elemen khusus untuk pengumuman pembaca layar (Screen Reader)
+        const srAnnouncer = document.createElement("div");
+        srAnnouncer.setAttribute("aria-live", "polite");
+        srAnnouncer.style.position = "absolute";
+        srAnnouncer.style.width = "1px";
+        srAnnouncer.style.height = "1px";
+        srAnnouncer.style.overflow = "hidden";
+        srAnnouncer.textContent = "Algarion sedang mengetik...";
+        
         const p = document.createElement("p");
+        p.textContent = "Sedang mengetik...";
+        
+        msgDiv.appendChild(srAnnouncer);
+        
         msgDiv.appendChild(label);
         msgDiv.appendChild(p);
         chatMessages.appendChild(msgDiv);
@@ -143,10 +195,11 @@ async function sendMessage() {
                     
                     try {
                         const json = JSON.parse(dataStr);
-                        // Ambil konten dari response streaming (menangani berbagai format API)
+                        // Ambil konten dari response streaming
                         const content = json.response || json.choices?.[0]?.delta?.content || "";
                         responseText += content;
-                        p.textContent = responseText;
+                        
+                        // JANGAN update p.textContent di sini agar screen reader tidak nyepam (spamming)
                         chatMessages.scrollTop = chatMessages.scrollHeight;
                     } catch (err) {
                         // Skip jika json tidak valid
@@ -155,7 +208,9 @@ async function sendMessage() {
             }
         }
 
-        // Simpan jawaban lengkap ke riwayat
+        // Update pengumuman pembaca layar dan tampilkan teks utuh
+        srAnnouncer.textContent = "Algarion membalas.";
+        p.textContent = responseText;
         chatHistory.push({ role: "assistant", content: responseText });
 
         // Tambahkan tombol salin setelah jawaban selesai
@@ -178,7 +233,6 @@ async function sendMessage() {
         userInput.disabled = false;
         sendButton.disabled = false;
         typingIndicator.classList.remove("visible");
-        userInput.focus();
     }
 }
 
