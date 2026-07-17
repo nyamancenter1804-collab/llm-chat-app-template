@@ -59,6 +59,11 @@ submitPasswordBtn.onclick = async () => {
             passwordContainer.style.display = "none";
             passwordError.style.display = "none";
             passwordInput.value = "";
+
+            // Visual feedback: show the button as "pressed" / active
+            advancedToggle.style.background = "var(--primary-color)";
+            advancedToggle.style.color = "white";
+            advancedToggle.setAttribute("aria-pressed", "true");
         } else {
             passwordError.style.display = "block";
             passwordInput.value = "";
