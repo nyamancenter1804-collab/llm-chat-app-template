@@ -19,31 +19,79 @@ const btnUploadTrigger = document.getElementById("btn-upload-trigger");
 const imageNameDisplay = document.getElementById("image-name-display");
 
 let advancedAIUnlocked = false;
-const ADVANCED_AI_PASSWORD = "AlgarionGanteng6969";
+
+// Get password UI elements
+const passwordContainer = document.getElementById("password-container");
+const passwordInput = document.getElementById("advanced-password");
+const submitPasswordBtn = document.getElementById("btn-submit-password");
+const passwordError = document.getElementById("password-error");
+const uploadContainer = document.getElementById("upload-container");
 
 advancedToggle.addEventListener("change", (e) => {
     if (e.target.checked) {
         // Require password before enabling Advanced AI
         if (!advancedAIUnlocked) {
-            const enteredPassword = prompt("Masukkan password untuk mengaktifkan Advanced AI:");
-            if (enteredPassword === ADVANCED_AI_PASSWORD) {
-                advancedAIUnlocked = true;
-                btnUploadTrigger.style.display = "inline-block";
-            } else {
-                // Wrong password - reset toggle and block access
-                e.target.checked = false;
-                alert("Password salah! Advanced AI tetap nonaktif.");
-            }
+            // Show password input field (accessible for NVDA)
+            passwordContainer.style.display = "block";
+            passwordInput.focus();
         } else {
-            btnUploadTrigger.style.display = "inline-block";
+            // Already unlocked this session
+            passwordContainer.style.display = "none";
+            uploadContainer.style.display = "block";
         }
     } else {
-        btnUploadTrigger.style.display = "none";
+        // Reset everything when toggled off
+        passwordContainer.style.display = "none";
+        uploadContainer.style.display = "none";
+        passwordInput.value = "";
+        passwordError.style.display = "none";
         imageUpload.value = "";
         imageNameDisplay.textContent = "";
         currentImageBase64 = null;
     }
 });
+
+// Handle password submission - validate via server
+submitPasswordBtn.onclick = async () => {
+    const entered = passwordInput.value.trim();
+    if (!entered) {
+        passwordError.style.display = "block";
+        passwordInput.focus();
+        return;
+    }
+    
+    try {
+        // Send password to server for validation
+        const res = await fetch("/api/verify-advanced", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: entered })
+        });
+        
+        if (res.ok) {
+            advancedAIUnlocked = true;
+            passwordContainer.style.display = "none";
+            uploadContainer.style.display = "block";
+            passwordError.style.display = "none";
+            passwordInput.value = "";
+        } else {
+            passwordError.style.display = "block";
+            passwordInput.value = "";
+            passwordInput.focus();
+        }
+    } catch (err) {
+        console.error("Password verification failed", err);
+        passwordError.style.display = "block";
+    }
+};
+
+// Allow Enter key in password field
+passwordInput.onkeydown = (e) => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        submitPasswordBtn.click();
+    }
+};
 
 btnUploadTrigger.addEventListener("click", () => {
     imageUpload.click();

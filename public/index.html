@@ -144,6 +144,15 @@
         <div class="advanced-ai-bar" style="padding: 10px 1.5rem; background: #fff; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
             <button id="btn-toggle-advanced" aria-pressed="false" style="padding: 8px 12px; cursor: pointer; border-radius: 6px; border: 1px solid var(--primary-color); background: white; color: var(--primary-color); font-weight: bold; font-size: 0.9rem;">Gunakan Advanced AI (Bisa Baca Gambar)</button>
             
+            <div id="password-container" style="display: none; width: 100%; padding-top: 8px; border-top: 1px dashed var(--border-color);">
+                <label for="advanced-password" style="font-size: 0.85rem; font-weight: bold; display: block; margin-bottom: 5px;">Masukkan Password Advanced AI:</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="password" id="advanced-password" style="flex: 1; padding: 6px 10px; border: 2px solid var(--border-color); border-radius: 6px; font-size: 0.95rem;" placeholder="Password..." aria-label="Password untuk Advanced AI">
+                    <button id="btn-submit-password" style="padding: 6px 16px; background: var(--primary-color); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Buka</button>
+                </div>
+                <span id="password-error" style="font-size: 0.8rem; color: #c0392b; font-weight: bold; display: none; margin-top: 4px;">Password salah. Coba lagi.</span>
+            </div>
+            
             <div id="upload-container" style="display: none; width: 100%; padding-top: 5px; border-top: 1px dashed var(--border-color);">
                 <label for="image-upload" style="font-size: 0.85rem; font-weight: bold; display: block; margin-bottom: 5px;">Pilih foto dari komputer Anda:</label>
                 <input type="file" id="image-upload" accept="image/*" style="display: block;">
